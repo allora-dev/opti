@@ -20,11 +20,20 @@ public sealed class SqliteChangeJournal : IChangeJournal, IDisposable
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         _db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString());
-        _db.Open();
-        Exec("PRAGMA journal_mode=WAL;");
-        Exec("PRAGMA synchronous=FULL;");
-        Exec("PRAGMA busy_timeout=5000;");
-        Migrate();
+        try
+        {
+            _db.Open();
+            Exec("PRAGMA journal_mode=WAL;");
+            Exec("PRAGMA synchronous=FULL;");
+            Exec("PRAGMA busy_timeout=5000;");
+            Migrate();
+        }
+        catch
+        {
+            // Журнал не открылся (например, он новее программы) — файл не должен остаться занятым
+            _db.Dispose();
+            throw;
+        }
     }
 
     public int Version => Convert.ToInt32(Scalar("PRAGMA user_version;"));

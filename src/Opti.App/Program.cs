@@ -12,6 +12,16 @@ public static class Program
     public static int Main(string[] args)
     {
         if (BenchProgram.IsBenchInvocation(args)) return BenchProgram.Run(args);
+        // Снимки интерфейса на демо-данных (CI): система не трогается, блокировка экземпляра не нужна
+        int shots = Array.IndexOf(args, "--screenshots");
+        if (shots >= 0)
+        {
+            App.ScreenshotDir = Path.GetFullPath(shots + 1 < args.Length ? args[shots + 1] : "screenshots");
+            var demo = new App();
+            demo.InitializeComponent();
+            demo.ThemeMode = System.Windows.ThemeMode.Light;
+            return demo.Run();
+        }
         // Один экземпляр: два процесса, меняющие систему одновременно, могут перепутать исходные значения для отката.
         using var instance = Opti.Workflow.SingleInstance.TryAcquire(TimeSpan.FromSeconds(3));
         if (instance is null)
