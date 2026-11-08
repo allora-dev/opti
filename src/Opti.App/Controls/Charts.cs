@@ -50,7 +50,7 @@ public abstract class ChartBase : FrameworkElement
 
     protected void Label(DrawingContext dc, string text, double x, double y, TextAlignment align)
     {
-        var ft = new FormattedText(text, CultureInfo.GetCultureInfo("ru-RU"), FlowDirection.LeftToRight, new Typeface("Segoe UI Variable Text, Segoe UI"), 11, LabelBrush,
+        var ft = new FormattedText(text, CultureInfo.GetCultureInfo("ru-RU"), FlowDirection.LeftToRight, new Typeface("Segoe UI Variable Small, Segoe UI"), 11, LabelBrush,
             VisualTreeHelper.GetDpi(this).PixelsPerDip);
         double dx = align switch { TextAlignment.Right => -ft.Width, TextAlignment.Center => -ft.Width / 2, _ => 0 };
         dc.DrawText(ft, new Point(x + dx, y - ft.Height / 2));

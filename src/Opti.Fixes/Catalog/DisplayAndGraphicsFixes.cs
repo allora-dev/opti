@@ -111,6 +111,7 @@ public sealed class GameModeOnFix : FixBase
 public sealed class GameDvrOffFix : FixBase
 {
     public override string Id => FixIds.GameDvrOff;
+    public override FixIntent Intent => FixIntent.Tuning;
     public override string Title => "Выключить фоновую запись Xbox Game Bar";
     public override string Explanation => "Отключает постоянную фоновую запись игрового процесса (Game DVR). Сам Game Bar и снимки экрана продолжают работать.";
     public override FixCategory Category => FixCategory.GameSettings;
@@ -143,6 +144,7 @@ public sealed class HagsAbFix : FixBase
 {
     public const string Key = @"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers";
     public override string Id => FixIds.HagsAb;
+    public override FixIntent Intent => FixIntent.Tuning;
     public override string Title => "Аппаратное планирование GPU (HAGS): проверить оба варианта";
     public override string Explanation => "Переключает HAGS, чтобы сравнить замером. Останется тот вариант, который покажет лучший фреймтайм. Требуется перезагрузка.";
     public override RiskLevel Risk => RiskLevel.Moderate;

@@ -7,7 +7,7 @@ namespace Opti.Workflow;
 /// <summary>Настройки программы (C:\ProgramData\Opti\settings.json).</summary>
 public sealed class OptiSettings
 {
-    public UserGoal DefaultGoal { get; set; } = UserGoal.Smoothness;
+    public UserGoal DefaultGoal { get; set; } = UserGoal.Balanced;
     /// <summary>Исправления, которые никогда не предлагать.</summary>
     public List<string> ExcludedFixIds { get; set; } = new();
     /// <summary>Свой путь к папке конфигурации OBS (если OBS портативный).</summary>

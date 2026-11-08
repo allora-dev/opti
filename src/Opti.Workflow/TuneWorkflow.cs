@@ -91,7 +91,11 @@ public sealed class TuneWorkflow
         if (report.RebootRequired && _scheduler is not null && resumeExe is not null)
         {
             try { _scheduler.ScheduleOnLogon(resumeExe, resumeArgs); }
-            catch (Exception ex) { s.Notes.Add("Задача продолжения не создана: " + ex.Message + ". После перезагрузки запустите Opti вручную."); }
+            catch (Exception ex)
+            {
+                s.Notes.Add("Задача продолжения не создана: " + ex.Message + ". После перезагрузки запустите Opti вручную.");
+                Opti.Core.Diagnostics.OptiLog.Warn("Задача продолжения не создана", ex);
+            }
         }
         Store.Save(s);
         return report;
@@ -137,19 +141,20 @@ public sealed class TuneWorkflow
         return new CompareOutcome(result, rec, msg);
     }
 
-    public RollbackReport RollbackSession(TuneSession s)
+    public RollbackReport RollbackSession(TuneSession s, bool force = false)
     {
-        var r = new RollbackService(_backends, _journal).RollbackRecords(_journal.GetAll().Where(x => x.SessionId.StartsWith(s.Id, StringComparison.Ordinal)));
+        var r = new RollbackService(_backends, _journal).RollbackRecords(_journal.GetAll().Where(x => x.SessionId.StartsWith(s.Id, StringComparison.Ordinal)), force);
         s.Outcome = SessionOutcome.RolledBack;
-        s.Notes.Add($"Откат {DateTimeOffset.Now:yyyy-MM-dd HH:mm}: восстановлено {r.Restored.Count}, ошибок {r.Errors.Count}.");
+        s.Notes.Add($"Откат {DateTimeOffset.Now:yyyy-MM-dd HH:mm}: восстановлено {r.Restored.Count}, ошибок {r.Errors.Count}" +
+                    (r.ChangedSinceOpti.Count > 0 ? $", оставлено (изменено после Opti) {r.ChangedSinceOpti.Count}." : "."));
         Store.Save(s);
         return r;
     }
 
-    public RollbackReport RollbackFix(TuneSession s, string fixId)
+    public RollbackReport RollbackFix(TuneSession s, string fixId, bool force = false)
     {
         var r = new RollbackService(_backends, _journal).RollbackRecords(
-            _journal.GetAll().Where(x => x.SessionId.StartsWith(s.Id, StringComparison.Ordinal) && string.Equals(x.FixId, fixId, StringComparison.OrdinalIgnoreCase)));
+            _journal.GetAll().Where(x => x.SessionId.StartsWith(s.Id, StringComparison.Ordinal) && string.Equals(x.FixId, fixId, StringComparison.OrdinalIgnoreCase)), force);
         s.Notes.Add($"Откачено {fixId}.");
         Store.Save(s);
         return r;
@@ -240,7 +245,7 @@ public sealed class TuneWorkflow
         else
         {
             ab.KeptB = false;
-            rb = new RollbackService(_backends, _journal).RollbackSession(AbSessionId(s, ab));
+            rb = new RollbackService(_backends, _journal).RollbackSession(AbSessionId(s, ab), force: true);
             ab.Summary = (result.Overall == Verdict.Worse
                 ? $"«{ab.VariantB}» хуже — возвращено исходное состояние."
                 : $"«{ab.VariantB}» не дал достоверного эффекта — возвращено исходное состояние.")

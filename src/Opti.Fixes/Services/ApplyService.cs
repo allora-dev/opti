@@ -57,15 +57,17 @@ public sealed class ApplyService
             {
                 var changes = fix.Apply(ctx);
                 report.Results.Add(new FixApplyResult(fix.Id, changes.Count > 0 ? FixOutcome.Applied : FixOutcome.NothingToChange, changes));
+                Opti.Core.Diagnostics.OptiLog.Info($"{report.SessionId}: {fix.Id} — изменений {changes.Count}");
                 if (changes.Count > 0 && fix.RequiresReboot) report.RebootRequired = true;
             }
             catch (Exception ex)
             {
                 // откат частично применённого исправления
                 var rollback = new RollbackService(_backends, _journal);
-                var partial = rollback.RollbackRecords(ctx.Records);
+                var partial = rollback.RollbackRecords(ctx.Records, force: true);
                 var msg = ex.Message + (partial.Errors.Count > 0 ? " | ошибки отката: " + string.Join("; ", partial.Errors) : "");
                 report.Results.Add(new FixApplyResult(fix.Id, FixOutcome.Failed, Array.Empty<ChangeRecord>(), msg));
+                Opti.Core.Diagnostics.OptiLog.Warn($"{report.SessionId}: {fix.Id} не применено: {msg}", ex);
             }
         }
 

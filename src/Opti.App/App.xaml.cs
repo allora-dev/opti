@@ -71,11 +71,7 @@ public partial class App : Application
 
     private static void Log(Exception ex)
     {
-        try
-        {
-            Directory.CreateDirectory(OptiPaths.LogsDir);
-            File.AppendAllText(Path.Combine(OptiPaths.LogsDir, $"opti-{DateTime.Now:yyyyMMdd}.log"), $"[{DateTime.Now:O}] {ex}\n\n");
-        }
-        catch { /* журнал недоступен */ }
+        if (Opti.Core.Diagnostics.OptiLog.Directory is null) Opti.Core.Diagnostics.OptiLog.Init(OptiPaths.LogsDir);
+        Opti.Core.Diagnostics.OptiLog.Error("Необработанная ошибка", ex);
     }
 }

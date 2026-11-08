@@ -6,9 +6,21 @@
             <TextBlock Text="Исправления" Style="{StaticResource PageTitle}"/>
             <TextBlock Text="{Binding Header}" Style="{StaticResource Secondary}"/>
             <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0"
-                       Text="Каждое исправление связано с найденной проблемой. Безопасные отмечены, рискованные — только по вашему выбору. Всё откатывается."/>
+                       Text="Каждое исправление связано с найденной проблемой. Режим решает, что отмечено по умолчанию; галочки можно поменять. Всё откатывается."/>
 
-            <ItemsControl ItemsSource="{Binding Fixes}" Margin="0,20,0,0">
+            <!-- Режим: можно сменить, план пересоберётся -->
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0" Padding="16,12">
+                <StackPanel>
+                    <WrapPanel>
+                        <TextBlock Text="Режим" Style="{StaticResource Strong}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                        <ListBox Style="{StaticResource Segmented}" ItemsSource="{Binding Goals}" SelectedItem="{Binding SelectedGoal}"
+                                 DisplayMemberPath="Title" AutomationProperties.Name="Режим оптимизации"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding GoalSummary}" Style="{StaticResource Caption}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Fixes}" Margin="0,12,0,0">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Style="{StaticResource Card}">

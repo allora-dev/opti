@@ -19,7 +19,8 @@ public sealed partial class NavItem : ObservableObject
 {
     public required string Title { get; init; }
     public required string Icon { get; init; }
-    public required Func<PageViewModel> Page { get; init; }
+    /// <summary>Страница пункта; null — страницы ещё нет (например, «Результат» до сравнения).</summary>
+    public required Func<PageViewModel?> Page { get; init; }
     /// <summary>Заголовок группы над пунктом (первый пункт группы).</summary>
     public string? Header { get; init; }
     /// <summary>Пункт внизу панели (История, Настройки).</summary>
@@ -51,7 +52,7 @@ public sealed partial class MainViewModel : ObservableObject
             new() { Title = "Главная", Icon = "\uE80F", Page = () => Home },
             new() { Title = "Анализ", Icon = "\uE9D9", Page = () => Analysis, IsEnabled = false, Header = "ОПТИМИЗАЦИЯ", DisabledHint = "Появится после анализа" },
             new() { Title = "Исправления", Icon = "\uE90F", Page = () => Strategy, IsEnabled = false, DisabledHint = "Появится после анализа" },
-            new() { Title = "Результат", Icon = "\uE9D2", Page = () => Compare ?? (PageViewModel)Home, IsEnabled = false, DisabledHint = "Появится после замера «после»" },
+            new() { Title = "Результат", Icon = "\uE9D2", Page = () => Compare, IsEnabled = false, DisabledHint = "Появится после замера «после»" },
             new() { Title = "Драйверы", Icon = "\uE950", Page = () => Drivers, IsEnabled = false, Header = "ИНСТРУМЕНТЫ", DisabledHint = "Появится после анализа" },
             new() { Title = "Твики", Icon = "\uE70F", Page = () => Tweaks },
             new() { Title = "Очистка", Icon = "\uEA99", Page = () => Cleanup },
@@ -100,9 +101,8 @@ public sealed partial class MainViewModel : ObservableObject
         CurrentPage = page;
         foreach (var n in Nav)
         {
-            PageViewModel? target = null;
-            try { target = n.Page(); } catch { /* страница ещё не создана */ }
-            n.IsActive = ReferenceEquals(target, page);
+            var target = n.Page();
+            n.IsActive = target is not null && ReferenceEquals(target, page);
         }
         page.OnShown();
     }
@@ -110,7 +110,7 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void NavigateTo(NavItem item)
     {
-        if (item.IsEnabled) Navigate(item.Page());
+        if (item.IsEnabled && item.Page() is { } page) Navigate(page);
     }
 
     public void ShowMessage(string text, bool error = false)

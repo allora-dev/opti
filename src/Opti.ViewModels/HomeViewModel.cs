@@ -15,8 +15,13 @@ public sealed partial class HomeViewModel : PageViewModel
 
     public override string Title => "Главная";
     public IReadOnlyList<GoalOption> Goals => GoalOption.All;
+    /// <summary>Таблица «чем отличаются режимы».</summary>
+    public IReadOnlyList<ModeComparisonRow> Comparison => ModeComparisonRow.All;
 
-    [ObservableProperty] private GoalOption? _selectedGoal;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(SelectedGoalHint))] private GoalOption? _selectedGoal;
+
+    /// <summary>Строка у кнопки анализа: какой режим выбран.</summary>
+    public string SelectedGoalHint => SelectedGoal is { } g ? $"Режим «{g.Title}» · 30–60 секунд · при анализе ничего не меняется" : "30–60 секунд · при анализе ничего не меняется";
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(AnalyzeCommand))] private bool _isAnalyzing;
     [ObservableProperty] private string? _progressText;
     [ObservableProperty] private string? _openSessionText;

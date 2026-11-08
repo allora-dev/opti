@@ -7,7 +7,7 @@
             <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitle}"/>
             <DockPanel Margin="0,4,0,0">
                 <Ellipse Style="{StaticResource Dot}" Width="10" Height="10" Fill="{Binding MessageColor, Converter={StaticResource ToneToBrush}}"/>
-                <TextBlock Text="{Binding Message}" Style="{StaticResource Body}" FontSize="15"/>
+                <TextBlock Text="{Binding Message}" Style="{StaticResource Body}" FontSize="15" LineHeight="22"/>
             </DockPanel>
             <ItemsControl ItemsSource="{Binding Warnings}" Margin="20,6,0,0">
                 <ItemsControl.ItemTemplate>
@@ -38,7 +38,7 @@
                                     <Run Text="{Binding Delta, Mode=OneWay}" FontWeight="SemiBold"/>
                                     <Run Text="{Binding VerdictText, Mode=OneWay}"/>
                                 </TextBlock>
-                                <TextBlock Text="{Binding Ci}" Style="{StaticResource Caption}" FontSize="11" Margin="0,4,0,0"/>
+                                <TextBlock Text="{Binding Ci}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

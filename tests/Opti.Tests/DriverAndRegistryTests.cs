@@ -37,7 +37,7 @@ public class DriverAndRegistryTests
     public void RegistryAudit_CleanProfiles_HaveNoFindings()
     {
         foreach (var name in new[] { "desktop-rtx", "laptop-optimus", "laptop-igpu", "fresh-install" })
-            Assert.DoesNotContain(TestProfiles.FindingIds(name), id => id.StartsWith("REGISTRY_"));
+            Assert.DoesNotContain(TestProfiles.FindingIds(name), id => id.StartsWith("REGISTRY_", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class DriverAndRegistryTests
         var fix = new RegistryPerfDefaultsFix();
         Assert.True(fix.IsApplicable(p));
 
-        var report = new ApplyService(reg, journal, null).Apply(p, new IFix[] { fix }, UserGoal.MaxFps);
+        var report = new ApplyService(reg, journal, null).Apply(p, new IFix[] { fix }, UserGoal.Maximum);
         Assert.Equal(FixOutcome.Applied, Assert.Single(report.Results).Outcome);
         var mm = @"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management";
         Assert.Equal(StateValue.DWord(0), r.Read(Targets.Reg(mm, "LargeSystemCache")));
@@ -88,7 +88,7 @@ public class DriverAndRegistryTests
         {
             [FixIds.RegistryPerfDefaults] = new Dictionary<string, string> { [RegistryDefaultsFixBase.RulesOption] = "TDR_DISABLED" },
         };
-        new ApplyService(reg, new InMemoryChangeJournal(), null).Apply(p, new IFix[] { new RegistryPerfDefaultsFix() }, UserGoal.MaxFps, options);
+        new ApplyService(reg, new InMemoryChangeJournal(), null).Apply(p, new IFix[] { new RegistryPerfDefaultsFix() }, UserGoal.Maximum, options);
         var r = map[ChangeType.Registry];
         Assert.False(r.Read(Targets.Reg(@"HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "TdrLevel")).Exists);
         Assert.Equal(StateValue.DWord(1), r.Read(Targets.Reg(@"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management", "LargeSystemCache")));
@@ -100,7 +100,7 @@ public class DriverAndRegistryTests
         var p = TestProfiles.Load("revios");
         var findings = TestProfiles.Findings(p);
         Assert.Contains(findings, f => f.Id == "REGISTRY_SECURITY" && f.Severity == Severity.Important);
-        var plan = new StrategyEngine(FixCatalog.All()).Build(p, findings, UserGoal.MaxFps);
+        var plan = new StrategyEngine(FixCatalog.All()).Build(p, findings, UserGoal.Maximum);
         var sec = Assert.Single(plan.Fixes, f => f.Fix.Id == FixIds.RegistrySecurityDefaults);
         Assert.False(sec.Selected);
         Assert.Contains(sec.Notes, n => n.Contains("сборкой"));
@@ -119,7 +119,7 @@ public class DriverAndRegistryTests
         Assert.DoesNotContain(f.Evidence, e => e.Contains("AX201")); // свежий
         Assert.DoesNotContain(f.Evidence, e => e.Contains("RTX 4060")); // видеокарту проверяют другие детекторы
         Assert.Contains("https://www.asus.com/support/download-center/", f.Links); // ноутбук ASUS → сайт ASUS
-        Assert.All(f.Links, l => Assert.True(l.StartsWith("https://") || l.StartsWith("ms-settings:"), l));
+        Assert.All(f.Links, l => Assert.True(l.StartsWith("https://", StringComparison.Ordinal) || l.StartsWith("ms-settings:", StringComparison.Ordinal), l));
     }
 
     [Theory]

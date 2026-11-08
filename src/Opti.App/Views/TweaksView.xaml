@@ -52,8 +52,8 @@
                                                         </StackPanel>
                                                         <TextBlock Text="{Binding Description}" Style="{StaticResource Caption}" Margin="0,3,0,0"/>
                                                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                                            <TextBlock Text="{Binding ApplyText}" Style="{StaticResource Caption}" FontSize="11.5"/>
-                                                            <Button Style="{StaticResource LinkButton}" Content="Источник" FontSize="11.5" Margin="12,0,0,0" CommandParameter="{Binding Link}"
+                                                            <TextBlock Text="{Binding ApplyText}" Style="{StaticResource Caption}"/>
+                                                            <Button Style="{StaticResource LinkButton}" Content="Источник" FontSize="12" Margin="12,0,0,0" CommandParameter="{Binding Link}"
                                                                     Command="{Binding DataContext.OpenLinkCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     Visibility="{Binding Link, Converter={StaticResource StrToVis}}"/>
                                                         </StackPanel>

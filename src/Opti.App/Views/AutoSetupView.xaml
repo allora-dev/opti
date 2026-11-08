@@ -22,8 +22,9 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Width="200">
-                                <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" FontSize="20" HorizontalAlignment="Left"
-                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,0,10"/>
+                                <Border Style="{StaticResource IconTile}" Width="36" Height="36" CornerRadius="9" Margin="0,0,0,10">
+                                    <TextBlock Text="{Binding Icon}" Style="{StaticResource IconTileGlyph}" FontSize="16"/>
+                                </Border>
                                 <TextBlock Text="{Binding Title}" Style="{StaticResource Strong}"/>
                                 <TextBlock Text="{Binding Description}" Style="{StaticResource Caption}" Margin="0,2,0,0"/>
                             </StackPanel>

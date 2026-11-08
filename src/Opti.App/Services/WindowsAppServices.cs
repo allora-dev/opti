@@ -20,7 +20,13 @@ public sealed class WindowsAppServices : IAppServices, IDisposable
 
     public WindowsAppServices()
     {
-        StartupNotice = OptiPaths.MigrateLegacyData();
+        // Сначала защита папки данных: только потом читаем настройки и журнал из неё.
+        var notices = OptiPaths.PrepareDataDir().ToList();
+        Opti.Core.Diagnostics.OptiLog.Init(OptiPaths.LogsDir);
+        Opti.Core.Diagnostics.OptiLog.Info($"Opti {AppInfo.Version} запущен: Windows {Environment.OSVersion.Version}, администратор: {DataDirSecurity.IsElevated()}");
+        foreach (var n in notices) Opti.Core.Diagnostics.OptiLog.Warn(n);
+        if (Opti.Native.SessionUser.MismatchWarning() is { } who) notices.Add(who);
+        StartupNotice = notices.Count > 0 ? string.Join("\n\n", notices) : null;
         var scheduler = new WindowsResumeScheduler();
         scheduler.CancelLegacy();
         Settings = OptiSettings.Load();

@@ -20,6 +20,8 @@ public sealed class WindowsResumeScheduler : IResumeScheduler
 
     public void ScheduleOnLogon(string exePath, string arguments)
     {
+        // Задача запускается без UAC — только из защищённой копии, а не из «Загрузок».
+        exePath = ResumeBinary.Protect(exePath, Opti.Fixes.Backends.OptiPaths.BinDir);
         if (exePath.Contains('"')) throw new ArgumentException("Недопустимый путь к программе");
         var user = Environment.UserDomainName + "\\" + Environment.UserName;
         var tr = $"\\\"{exePath}\\\" {arguments}";
@@ -35,6 +37,48 @@ public sealed class WindowsResumeScheduler : IResumeScheduler
     public void CancelLegacy()
     {
         try { _runner.Run("schtasks.exe", "/Delete /F /TN \"GameTune\\Resume\""); } catch { /* задачи нет */ }
+    }
+}
+
+/// <summary>
+/// Копия программы для задачи продолжения. Задача запускается с наивысшими правами без запроса UAC,
+/// поэтому запускать её из «Загрузок» нельзя: файл там может заменить любая программа пользователя.
+/// Копия лежит в защищённой папке данных (писать туда могут только администраторы, см. DataDirSecurity).
+/// </summary>
+public static class ResumeBinary
+{
+    public static string Protect(string exePath, string binDir)
+    {
+        try
+        {
+            var src = Path.GetFullPath(exePath);
+            var dest = Path.Combine(Path.GetFullPath(binDir), Path.GetFileName(src));
+            if (string.Equals(src, dest, StringComparison.OrdinalIgnoreCase)) return dest;
+            Directory.CreateDirectory(binDir);
+            if (!File.Exists(dest) || !SameContent(src, dest))
+            {
+                var tmp = dest + ".tmp";
+                File.Copy(src, tmp, overwrite: true);
+                File.Move(tmp, dest, overwrite: true);
+            }
+            return dest;
+        }
+        catch
+        {
+            // Копию сделать не удалось (нет места, файл занят) — задача запустит исходный файл, как раньше.
+            return exePath;
+        }
+    }
+
+    private static bool SameContent(string a, string b)
+    {
+        var fa = new FileInfo(a);
+        var fb = new FileInfo(b);
+        if (fa.Length != fb.Length) return false;
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        using var sa = fa.OpenRead();
+        using var sb = fb.OpenRead();
+        return sha.ComputeHash(sa).AsSpan().SequenceEqual(System.Security.Cryptography.SHA256.HashData(sb));
     }
 }
 

@@ -8,6 +8,7 @@ public sealed class MouseAccelOffFix : FixBase
 {
     public const string Key = @"HKCU\Control Panel\Mouse";
     public override string Id => FixIds.MouseAccelOff;
+    public override FixIntent Intent => FixIntent.Preference;
     public override string Title => "Отключить ускорение мыши";
     public override string Explanation => "Снимает «Повышенную точность установки указателя»: движение курсора становится строго пропорциональным движению руки. " +
                                           "Вступает в силу после выхода из системы и повторного входа.";
@@ -27,6 +28,7 @@ public sealed class AccessibilityHotkeysOffFix : FixBase
     public const string StickyKey = @"HKCU\Control Panel\Accessibility\StickyKeys";
     public const string FilterKey = @"HKCU\Control Panel\Accessibility\Keyboard Response";
     public override string Id => FixIds.AccessibilityHotkeysOff;
+    public override FixIntent Intent => FixIntent.Preference;
     public override string Title => "Отключить сочетания залипания клавиш";
     public override string Explanation => "Отключает только сочетания Shift×5 и удержание правого Shift, которые сворачивают игру. Сами специальные возможности остаются в параметрах Windows.";
     public override FixCategory Category => FixCategory.GameSettings;

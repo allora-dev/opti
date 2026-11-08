@@ -26,28 +26,35 @@ internal static class Commands
             Opti {AppInfo.Version} — диагностика лагов, точечные исправления и честный замер «до / после».
 
             Пошагово (рекомендуется):
-              run      [--goal <цель>] [--mode game|synthetic|presentmon]   Мастер: анализ → замер «до» → план → применение →
+              run      [--goal <режим>] [--mode game|synthetic|presentmon]   Мастер: анализ → замер «до» → план → применение →
                                                                              (перезагрузка) → замер «после» → сравнение → отчёт
               resume                                                         Продолжить после перезагрузки (запускается автоматически)
 
             Отдельные шаги:
               analyze  [--out profile.json] [--html report.html] [--dpc 30] [--net]
-              plan     --goal <цель> [--profile profile.json]                План и точный список изменений (сухой прогон)
+              plan     --goal <режим> [--profile profile.json]                План и точный список изменений (сухой прогон)
               measure  [--mode game|synthetic|presentmon] [--phase before|after] [--runs 3] [--duration 60] [--warmup 10]
                        [--process game.exe] [--out file.json]                Замер (в текущую сессию или в файл)
-              apply    [--goal <цель>] [--fix ID,ID] [--option ID:key=value] [--yes] [--reboot]
+              apply    [--goal <режим>] [--fix ID,ID] [--option ID:key=value] [--yes] [--reboot]
               compare  [before.json after.json] [--html out.html]           Сравнение (сессии или двух файлов)
               ab       --fix HAGS_AB|TIMER_RES_GLOBAL|BCD_TIMERS_RESET [--mode synthetic] [--variant on|off]
                                                                              A/B-проверка спорной настройки, остаётся лучший вариант
               report   [--session ID] [--out report.html] [--open]          HTML-отчёт
-              rollback --fix ID [--session ID] | --session ID | --all       Откат
+              rollback --fix ID [--session ID] | --session ID | --all [--force]
+                                                                             Откат; изменённое после Opti остаётся,
+                                                                             --force возвращает исходное значение
               history                                                        Сессии и журнал изменений
               latency  [--seconds 60]                                        Задержка системы: DPC/ISR + точность таймера
               net      [--target 1.1.1.1] [--no-load]                        Пинг, джиттер, bufferbloat
               version                                                        Версия и проверка обновлений
               doctor                                                         Проверка окружения (права, ETW, утилиты, PresentMon)
+              bugreport [--out папка]                                        Архив для обращения: журнал работы, сессии, журнал изменений
+                                                                             (никуда не отправляется)
 
-            Цели: latency (мин. задержка), smooth (плавность), fps (макс. FPS), stream (стрим/запись), quiet (тихо и холодно).
+            Режимы (--goal):
+              max       Максимальная — всё, что даёт прирост: питание без ограничений, мышь, таймеры (с A/B-замером)
+              balanced  Баланс — исправления ошибок + питание, сеть и игровые параметры Windows (по умолчанию)
+              min       Минимальная — только исправление ошибок и возврат стандартных значений Windows
             Данные: {OptiPaths.DataDir}
             """);
         return 0;
@@ -55,15 +62,17 @@ internal static class Commands
 
     // ------------------------------------------------------------------ общие помощники
 
-    internal static UserGoal ParseGoal(string? s, UserGoal def = UserGoal.Smoothness) => (s ?? "").ToLowerInvariant() switch
+    internal static UserGoal ParseGoal(string? s, UserGoal def = UserGoal.Balanced) => (s ?? "").Trim().ToLowerInvariant() switch
     {
         "" => def,
-        "latency" or "1" => UserGoal.LowLatency,
-        "smooth" or "2" => UserGoal.Smoothness,
-        "fps" or "3" => UserGoal.MaxFps,
-        "stream" or "4" => UserGoal.Streaming,
-        "quiet" or "5" => UserGoal.QuietCool,
-        var x => throw new ArgumentException($"Неизвестная цель «{x}». Варианты: latency, smooth, fps, stream, quiet."),
+        "1" => UserGoal.Maximum,
+        "2" => UserGoal.Balanced,
+        "3" => UserGoal.Minimal,
+        // старые цели (до 1.3) — для скриптов пользователей
+        "latency" or "fps" => UserGoal.Maximum,
+        "smooth" or "stream" => UserGoal.Balanced,
+        "quiet" => UserGoal.Minimal,
+        var x => GoalNames.FromLegacy(x) ?? throw new ArgumentException($"Неизвестный режим «{x}». Варианты: max, balanced, min."),
     };
 
     internal static MeasureMode ParseMode(string? s, MeasureMode def) => (s ?? "").ToLowerInvariant() switch
@@ -83,8 +92,11 @@ internal static class Commands
     private static UserGoal AskGoal(Args a, OptiSettings settings)
     {
         if (a.Get("goal") is { } g) return ParseGoal(g);
-        Console.WriteLine("\nЦель:\n  1 — минимальная задержка (соревновательные игры)\n  2 — плавность (ровный фреймтайм)\n  3 — максимальный FPS\n  4 — стрим / запись\n  5 — тихо и холодно");
-        Console.Write($"Выберите [1–5, Enter — {settings.DefaultGoal.Ru()}]: ");
+        Console.WriteLine("\nРежим:");
+        int n = 0;
+        foreach (var i in new[] { UserGoal.Maximum, UserGoal.Balanced, UserGoal.Minimal }.Select(GoalInfo.Of))
+            Console.WriteLine($"  {++n} — {i.Title}: {i.Summary}");
+        Console.Write($"Выберите [1–3, Enter — {settings.DefaultGoal.Ru()}]: ");
         return ParseGoal(Console.ReadLine()?.Trim(), settings.DefaultGoal);
     }
 
@@ -317,7 +329,7 @@ internal static class Commands
         {
             var color = m.Verdict switch { Verdict.Better => ConsoleColor.Green, Verdict.Worse => ConsoleColor.Red, _ => ConsoleColor.Gray };
             Output.Color(color, "  " + m.Format() + "\n");
-            Output.Color(ConsoleColor.DarkGray, $"     95 % ДИ: до [{m.BeforeCi.Low:0.##}; {m.BeforeCi.High:0.##}], после [{m.AfterCi.Low:0.##}; {m.AfterCi.High:0.##}], разброс прогонов {m.RunSpread:0.##}\n");
+            Output.Color(ConsoleColor.DarkGray, $"     95 % ДИ: до [{m.BeforeCi.Low:0.##}; {m.BeforeCi.High:0.##}], после [{m.AfterCi.Low:0.##}; {m.AfterCi.High:0.##}], разность [{m.DiffCi.Low:+0.##;-0.##;0}; {m.DiffCi.High:+0.##;-0.##;0}], разброс прогонов {m.RunSpread:0.##}\n");
         }
         foreach (var w in result.Warnings) Output.Color(ConsoleColor.Yellow, "  ! " + w + "\n");
     }
@@ -326,8 +338,10 @@ internal static class Commands
     {
         foreach (var r in rep.Restored) Output.Color(ConsoleColor.Green, $"  восстановлено {r.Type} {r.Target} = {r.Before}\n");
         foreach (var r in rep.SkippedSupersededBy) Output.Color(ConsoleColor.Yellow, $"  оставлено {r.Type} {r.Target}: позже изменено другим исправлением\n");
+        foreach (var d in rep.ChangedSinceOpti)
+            Output.Color(ConsoleColor.Yellow, $"  оставлено {d.Record.Type} {d.Record.Target}: изменено после Opti (сейчас {d.Current}, Opti ставил {d.Record.After}, до Opti было {d.Record.Before}). Вернуть исходное: --force\n");
         foreach (var e in rep.Errors) Output.Color(ConsoleColor.Red, $"  ошибка: {e}\n");
-        if (rep.Restored.Count + rep.SkippedSupersededBy.Count + rep.Errors.Count == 0) Console.WriteLine("  Нечего откатывать.");
+        if (rep.Restored.Count + rep.SkippedSupersededBy.Count + rep.ChangedSinceOpti.Count + rep.Errors.Count == 0) Console.WriteLine("  Нечего откатывать.");
         if (rep.Restored.Any(r => r.Type is ChangeType.Bcd) || rep.Restored.Any(r => r.Target.Contains("GraphicsDrivers") || r.Target.Contains("Dwm") || r.Target.Contains("kernel")))
             Output.Color(ConsoleColor.Yellow, "  Часть возвращённых настроек вступит в силу после перезагрузки.\n");
     }
@@ -341,7 +355,7 @@ internal static class Commands
         var wf = host.Workflow;
         var s = wf.Store.LatestOpen();
         if (s is null) { Console.WriteLine("Нет незавершённых сессий."); try { new WindowsResumeScheduler().Cancel(); } catch { } return 0; }
-        Console.WriteLine($"Opti {AppInfo.Version}: продолжаю сессию {s.Id} (цель: {s.Goal.Ru()}).");
+        Console.WriteLine($"Opti {AppInfo.Version}: продолжаю сессию {s.Id} (режим «{s.Goal.Ru()}»).");
 
         int rc;
         if (s.AbTests.Any(x => x.Phase == AbPhase.AwaitRebootB))
@@ -617,26 +631,36 @@ internal static class Commands
         RequireWindows("Откат");
         using var host = new CliHost();
         var svc = new RollbackService(WindowsBackends.Create(), host.Journal);
+        bool force = a.Has("force");
         RollbackReport rep;
         if (a.Get("fix") is { } fix)
         {
             rep = a.Get("session") is { } sid && host.Workflow.Store.Load(sid) is { } s1
-                ? host.Workflow.RollbackFix(s1, fix)
-                : svc.RollbackFix(fix, a.Get("session"));
+                ? host.Workflow.RollbackFix(s1, fix, force)
+                : svc.RollbackFix(fix, a.Get("session"), force);
         }
         else if (a.Get("session") is { } s)
         {
-            rep = host.Workflow.Store.Load(s) is { } session ? host.Workflow.RollbackSession(session)
-                : svc.RollbackRecords(host.Journal.GetAll().Where(r => r.SessionId.StartsWith(s, StringComparison.Ordinal)));
+            rep = host.Workflow.Store.Load(s) is { } session ? host.Workflow.RollbackSession(session, force)
+                : svc.RollbackRecords(host.Journal.GetAll().Where(r => r.SessionId.StartsWith(s, StringComparison.Ordinal)), force);
         }
         else if (a.Has("all"))
         {
             if (!a.Has("yes") && !Output.Confirm("Откатить ВСЕ изменения Opti?")) return 1;
-            rep = svc.RollbackAll();
+            rep = svc.RollbackAll(force);
         }
         else throw new ArgumentException("Укажите --fix ID, --session ID или --all");
         PrintRollback(rep);
         return rep.Errors.Count > 0 ? 3 : 0;
+    }
+
+    public static int BugReport(Args a)
+    {
+        using var journal = new SqliteChangeJournal(OptiPaths.JournalPath);
+        var path = ProblemReport.Create(OptiPaths.DataDir, journal, a.Get("out") ?? Environment.CurrentDirectory, AppInfo.Version);
+        Console.WriteLine($"Отчёт о проблеме: {path}");
+        Console.WriteLine("Он никуда не отправляется — приложите его к обращению сами.");
+        return 0;
     }
 
     public static int History(Args a)
@@ -655,7 +679,7 @@ internal static class Commands
             };
             Output.Header($"{s.CreatedAt.LocalDateTime:yyyy-MM-dd HH:mm} · {s.Id} · {s.Goal.Ru()} · {outcome} · {s.Stage}");
             foreach (var r in all.Where(r => r.SessionId.StartsWith(s.Id, StringComparison.Ordinal)))
-                Console.WriteLine($"  {(r.RolledBack ? "↩" : "✓")} {r.FixId} {r.Type} {r.Target}: {r.Before} → {r.After}");
+                Console.WriteLine($"  {(r.RolledBack ? "↩" : r.Committed ? "✓" : "?")} {r.FixId} {r.Type} {r.Target}: {r.Before} → {r.After}{(r.Committed ? "" : " (не подтверждено: программа завершилась во время изменения)")}");
             foreach (var ab in s.AbTests) Console.WriteLine($"  A/B {ab.FixId}: {ab.Summary ?? ab.Phase.ToString()}");
         }
         var orphan = all.Where(r => sessions.All(s => !r.SessionId.StartsWith(s.Id, StringComparison.Ordinal))).ToList();

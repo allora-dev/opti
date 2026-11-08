@@ -12,14 +12,19 @@
         <StackPanel Margin="{StaticResource PageMargin}" MaxWidth="{StaticResource ContentMaxWidth}" HorizontalAlignment="Left">
             <TextBlock Text="Настройки" Style="{StaticResource PageTitle}"/>
 
-            <TextBlock Text="Цель по умолчанию" Style="{StaticResource SectionTitle}"/>
+            <TextBlock Text="Режим по умолчанию" Style="{StaticResource SectionTitle}"/>
             <ListBox Style="{StaticResource ChoiceList}" ItemsSource="{Binding Goals}" SelectedItem="{Binding DefaultGoal}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Orientation="Horizontal" Width="150">
-                            <TextBlock Text="{Binding Icon}" Style="{StaticResource Icon}" Margin="0,0,10,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
-                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
-                        </StackPanel>
+                        <DockPanel Width="220">
+                            <Border DockPanel.Dock="Left" Style="{StaticResource IconTile}" Width="32" Height="32" CornerRadius="8" Margin="0,0,12,0" VerticalAlignment="Top">
+                                <TextBlock Text="{Binding Icon}" Style="{StaticResource IconTileGlyph}" FontSize="15"/>
+                            </Border>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" Style="{StaticResource Strong}"/>
+                                <TextBlock Text="{Binding Description}" Style="{StaticResource Caption}"/>
+                            </StackPanel>
+                        </DockPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
@@ -88,6 +93,8 @@
                 <Button Style="{StaticResource AccentButton}" Content="Сохранить" Command="{Binding SaveCommand}"/>
                 <Button Content="Проверить обновления" Command="{Binding CheckUpdatesCommand}" Margin="0,0,8,0"/>
                 <Button Content="Папка данных" Command="{Binding OpenDataDirCommand}" Margin="0,0,8,0"/>
+                <Button Content="Отчёт о проблеме" Command="{Binding CreateProblemReportCommand}" Margin="0,0,8,0"
+                        ToolTip="Архив с журналом работы, сессиями и журналом изменений — на рабочий стол. Никуда не отправляется."/>
                 <Button Content="Все версии" Command="{Binding OpenReleasesCommand}"/>
             </StackPanel>
             <TextBlock Text="{Binding UpdateStatus}" Style="{StaticResource Caption}" Margin="0,8,0,0"/>

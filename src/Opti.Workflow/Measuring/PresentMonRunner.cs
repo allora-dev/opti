@@ -72,8 +72,9 @@ public sealed class PresentMonRunner : IMeasureRunner
     {
         var psi = new ProcessStartInfo(_exe, args) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
         using var p = Process.Start(psi) ?? throw new InvalidOperationException("Не удалось запустить PresentMon");
-        _ = p.StandardOutput.ReadToEndAsync();
-        _ = p.StandardError.ReadToEndAsync();
+        // Вывод только вычитывается, чтобы PresentMon не завис на полном буфере; отмена — через Kill ниже.
+        _ = p.StandardOutput.ReadToEndAsync(CancellationToken.None);
+        _ = p.StandardError.ReadToEndAsync(CancellationToken.None);
         var sw = Stopwatch.StartNew();
         int tick = 0;
         while (!p.HasExited)

@@ -94,7 +94,9 @@ public sealed partial class CompareViewModel : PageViewModel
         if (!await Main.Services.ConfirmAsync("Откатить исправление?", item.Title)) return;
         var r = await Task.Run(() => Main.Services.Workflow.RollbackFix(_session, item.FixId));
         item.RolledBack = true;
-        Main.ShowMessage(r.Errors.Count == 0 ? $"«{item.Title}» откачено." : "Ошибки отката: " + string.Join("; ", r.Errors), r.Errors.Count > 0);
+        Main.ShowMessage(r.Errors.Count == 0
+            ? $"«{item.Title}» откачено." + (r.ChangedSinceOpti.Count > 0 ? $" Настройки, изменённые после Opti ({r.ChangedSinceOpti.Count}), оставлены как есть." : "")
+            : "Ошибки отката: " + string.Join("; ", r.Errors), r.Errors.Count > 0);
     }
 
     [RelayCommand]
@@ -104,7 +106,7 @@ public sealed partial class CompareViewModel : PageViewModel
         var r = await Task.Run(() => Main.Services.Workflow.RollbackSession(_session));
         LoadFixes();
         OnPropertyChanged(nameof(SuggestRollback));
-        Main.ShowMessage($"Откачено изменений: {r.Restored.Count}." + (r.Errors.Count > 0 ? $" Ошибок: {r.Errors.Count}." : "") + " Некоторые настройки вернутся после перезагрузки.");
+        Main.ShowMessage(r.Summary() + " Некоторые настройки вернутся после перезагрузки.", r.Errors.Count > 0);
     }
 
     [RelayCommand]
