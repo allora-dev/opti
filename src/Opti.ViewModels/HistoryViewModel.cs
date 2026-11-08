@@ -11,7 +11,7 @@ namespace Opti.ViewModels;
 public sealed class SessionItem
 {
     public required TuneSession Session { get; init; }
-    public string Title => $"{Session.CreatedAt.LocalDateTime:dd.MM.yyyy HH:mm} · {Session.Goal.Ru()}";
+    public string Title => $"{Session.CreatedAt.LocalDateTime:dd.MM.yyyy HH:mm} · режим «{Session.Goal.Ru()}»";
     public required string OutcomeText { get; init; }
     public required string Color { get; init; }
     public required string Details { get; init; }
@@ -45,6 +45,7 @@ public sealed partial class HistoryViewModel : PageViewModel
             {
                 Session = s, OutcomeText = text, Color = color,
                 Details = $"Изменений: {recs.Count(r => !r.RolledBack)} действует, {recs.Count(r => r.RolledBack)} откачено" +
+                          (recs.Any(r => !r.Committed && !r.RolledBack) ? $" · не подтверждено: {recs.Count(r => !r.Committed && !r.RolledBack)} (программа завершилась во время изменения — откат безопасен)" : "") +
                           (s.AbTests.Count > 0 ? $" · A/B: {string.Join(", ", s.AbTests.Select(a => a.FixId + (a.KeptB ? " ✓" : " ✗")))}" : ""),
             });
         }
@@ -72,7 +73,7 @@ public sealed partial class HistoryViewModel : PageViewModel
     {
         if (!await Main.Services.ConfirmAsync("Откат сессии", $"Вернуть изменения сессии {item.Title}?")) return;
         var r = await Task.Run(() => Main.Services.Workflow.RollbackSession(item.Session));
-        Main.ShowMessage($"Откачено изменений: {r.Restored.Count}." + (r.Errors.Count > 0 ? $" Ошибок: {r.Errors.Count}." : ""), r.Errors.Count > 0);
+        Main.ShowMessage(r.Summary(), r.Errors.Count > 0);
         Refresh();
     }
 
@@ -83,7 +84,7 @@ public sealed partial class HistoryViewModel : PageViewModel
         var wf = Main.Services.Workflow;
         var r = await Task.Run(() => new RollbackService(wf.BackendsForRollback, Main.Services.Journal).RollbackAll());
         foreach (var s in wf.Store.All().Where(s => s.Outcome != SessionOutcome.RolledBack)) { s.Outcome = SessionOutcome.RolledBack; s.Stage = SessionStage.Closed; wf.Store.Save(s); }
-        Main.ShowMessage($"Полный откат: восстановлено {r.Restored.Count}." + (r.Errors.Count > 0 ? $" Ошибок: {r.Errors.Count}." : "") + " Перезагрузите компьютер.");
+        Main.ShowMessage(r.Summary("Полный откат: восстановлено") + " Перезагрузите компьютер.", r.Errors.Count > 0);
         Refresh();
     }
 }

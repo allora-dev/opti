@@ -64,7 +64,7 @@ internal static class Output
 
     public static void PrintPlan(StrategyPlan plan)
     {
-        Header($"Стратегия — цель: {plan.Goal.Ru()}; устройство: {plan.Device.Describe()}");
+        Header($"Стратегия — режим «{plan.Goal.Ru()}»; устройство: {plan.Device.Describe()}");
         if (plan.Fixes.Count == 0) Console.WriteLine("Программе нечего исправлять автоматически.");
         foreach (var p in plan.Fixes)
         {

@@ -82,5 +82,20 @@ public sealed partial class SettingsViewModel : PageViewModel
     }
 
     [RelayCommand] private void OpenDataDir() => Main.Services.OpenPath(DataDir);
+
+    /// <summary>Архив для обращения в поддержку: сохраняется на рабочий стол и показывается в Проводнике.</summary>
+    [RelayCommand]
+    private void CreateProblemReport()
+    {
+        try
+        {
+            var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var path = Opti.Workflow.ProblemReport.Create(DataDir, Main.Services.Journal,
+                string.IsNullOrEmpty(desktop) ? Main.Services.ReportsDir : desktop, Main.Services.AppVersion);
+            Main.ShowMessage("Отчёт о проблеме сохранён: " + path + ". Он нигде не публикуется — приложите его к обращению сами.");
+            Main.Services.RevealFile(path);
+        }
+        catch (Exception ex) { Main.ShowMessage("Не удалось собрать отчёт: " + ex.Message, error: true); }
+    }
     [RelayCommand] private void OpenReleases() => Main.Services.OpenPath(Opti.Workflow.AppInfo.ReleasesUrl);
 }

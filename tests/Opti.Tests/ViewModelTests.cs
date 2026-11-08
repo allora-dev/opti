@@ -84,7 +84,7 @@ public sealed class ViewModelTests : IDisposable
         Assert.Same(main.Home, main.CurrentPage);
         Assert.False(main.Nav[1].IsEnabled);
 
-        main.Home.SelectedGoal = GoalOption.All.First(g => g.Goal == Core.Strategy.UserGoal.Streaming);
+        main.Home.SelectedGoal = GoalOption.All.First(g => g.Goal == Core.Strategy.UserGoal.Balanced);
         await main.Home.AnalyzeCommand.ExecuteAsync(null);
         Assert.Same(main.Analysis, main.CurrentPage);
         Assert.True(main.Nav[1].IsEnabled);
@@ -231,7 +231,7 @@ public sealed class ViewModelTests : IDisposable
         Assert.False(svc.Map[ChangeType.Bcd].Read(Targets.Bcd("useplatformclock")).Exists);
     }
 
-    private static async Task<T> WaitForPage<T>(MainViewModel main, int timeoutMs = 10000) where T : PageViewModel
+    private static async Task<T> WaitForPage<T>(MainViewModel main, int timeoutMs = 60000) // с замером покрытия код в разы медленнее where T : PageViewModel
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         while (sw.ElapsedMilliseconds < timeoutMs)
@@ -247,7 +247,7 @@ public sealed class ViewModelTests : IDisposable
     {
         var svc = new FakeServices(_dir, "laptop-optimus", n => n < 2 ? 8.5 : 7.0);
         var main = new MainViewModel(svc);
-        main.Home.SelectedGoal = GoalOption.All.First(g => g.Goal == Core.Strategy.UserGoal.Streaming);
+        main.Home.SelectedGoal = GoalOption.All.First(g => g.Goal == Core.Strategy.UserGoal.Balanced);
         await main.Home.AnalyzeCommand.ExecuteAsync(null);
         Assert.True(main.Analysis.CanAutoFix);
         Assert.Contains("исправлен", main.Analysis.AutoFixText);
@@ -498,5 +498,51 @@ public sealed class ViewModelTests : IDisposable
         Assert.Equal(10, svc.Settings.MeasureRuns);
         Assert.Contains(FixIds.MpoReset, svc.Settings.ExcludedFixIds);
         Assert.True(File.Exists(Path.Combine(_dir, "settings.json")));
+    }
+
+    [Fact]
+    public void Navigation_OnlyCurrentPageIsActive()
+    {
+        var main = new MainViewModel(new FakeServices(_dir, "desktop-rtx", _ => 8));
+        Assert.True(main.Nav[0].IsActive);
+        // «Результат» без сравнения не должен подсвечиваться вместе с «Главной»
+        Assert.All(main.Nav.Skip(1), n => Assert.False(n.IsActive));
+        main.Navigate(main.Home);
+        Assert.Single(main.Nav, n => n.IsActive);
+        main.NavigateToCommand.Execute(main.Nav[3]); // недоступный пункт — ничего не происходит
+        Assert.Same(main.Home, main.CurrentPage);
+    }
+
+    [Fact]
+    public async Task Home_OffersThreeModes_BalancedByDefault()
+    {
+        var main = new MainViewModel(new FakeServices(_dir, "desktop-rtx", _ => 8));
+        Assert.Equal(new[] { Core.Strategy.UserGoal.Maximum, Core.Strategy.UserGoal.Balanced, Core.Strategy.UserGoal.Minimal },
+            main.Home.Goals.Select(g => g.Goal));
+        Assert.Equal(Core.Strategy.UserGoal.Balanced, main.Home.SelectedGoal!.Goal);
+        Assert.All(main.Home.Goals, g => { Assert.NotEmpty(g.Summary); Assert.NotEmpty(g.Includes); });
+        Assert.All(main.Home.Comparison, r => Assert.Equal(3, r.Cells.Count));
+
+        main.Home.SelectedGoal = main.Home.Goals.Single(g => g.Goal == Core.Strategy.UserGoal.Minimal);
+        Assert.Contains("Минимальная", main.Home.SelectedGoalHint);
+        await main.Home.AnalyzeCommand.ExecuteAsync(null);
+        Assert.Equal(Core.Strategy.UserGoal.Minimal, main.Session!.Goal);
+    }
+
+    [Fact]
+    public async Task Strategy_ModeSwitch_RebuildsPlanAndSavesSession()
+    {
+        var main = new MainViewModel(new FakeServices(_dir, "desktop-rtx", _ => 8));
+        await main.Home.AnalyzeCommand.ExecuteAsync(null);
+        var s = main.Session!;
+        main.Strategy.Load(s);
+        Assert.Equal(Core.Strategy.UserGoal.Balanced, main.Strategy.SelectedGoal!.Goal);
+        Assert.Contains(main.Strategy.Fixes, f => f.Id == FixIds.PowerSchemePerf && f.IsSelected);
+
+        main.Strategy.SelectedGoal = main.Strategy.Goals.Single(g => g.Goal == Core.Strategy.UserGoal.Minimal);
+        Assert.Equal(Core.Strategy.UserGoal.Minimal, s.Goal);
+        Assert.Equal(Core.Strategy.UserGoal.Minimal, main.Services.Workflow.Store.Load(s.Id)!.Goal);
+        Assert.Contains(main.Strategy.Fixes, f => f.Id == FixIds.PowerSchemePerf && !f.IsSelected);
+        Assert.All(main.Strategy.Fixes.Where(f => f.IsSelected), f => Assert.Equal(FixIntent.Repair, f.Fix.Intent));
     }
 }

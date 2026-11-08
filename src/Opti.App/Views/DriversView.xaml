@@ -14,7 +14,9 @@
                         <Button Style="{StaticResource AccentButton}" Content="{Binding OemTitle}" Command="{Binding OpenOemCommand}" Margin="0"
                                 Visibility="{Binding HasOem, Converter={StaticResource BoolToVis}}"/>
                     </StackPanel>
-                    <TextBlock Text="&#xE950;" Style="{StaticResource Icon}" FontSize="20" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Margin="0,0,14,0"/>
+                    <Border Style="{StaticResource IconTile}" Margin="0,0,14,0" VerticalAlignment="Top">
+                        <TextBlock Text="&#xE950;" Style="{StaticResource IconTileGlyph}"/>
+                    </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding Summary}" Style="{StaticResource Strong}"/>
                         <TextBlock Text="{Binding BoardText}" Style="{StaticResource Caption}" Visibility="{Binding BoardText, Converter={StaticResource StrToVis}}"/>

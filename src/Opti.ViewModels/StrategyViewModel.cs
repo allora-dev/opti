@@ -25,10 +25,31 @@ public sealed partial class StrategyViewModel : PageViewModel
 
     public StrategyPlan? Plan { get; private set; }
 
+    /// <summary>Режим можно сменить прямо здесь: план пересобирается, отметки — по политике нового режима.</summary>
+    public IReadOnlyList<GoalOption> Goals => GoalOption.All;
+    [ObservableProperty] private GoalOption? _selectedGoal;
+    [ObservableProperty] private string? _goalSummary;
+    private bool _loading;
+
+    partial void OnSelectedGoalChanged(GoalOption? value)
+    {
+        if (_loading || value is null || Main.Session is not { } s || s.Goal == value.Goal) return;
+        s.Goal = value.Goal;
+        Main.Services.Workflow.Store.Save(s);
+        Load(s);
+    }
+
     public void Load(TuneSession s)
     {
+        _loading = true;
+        try
+        {
+            SelectedGoal = GoalOption.All.First(g => g.Goal == s.Goal);
+            GoalSummary = SelectedGoal.Summary;
+        }
+        finally { _loading = false; }
         Plan = Main.Services.Workflow.BuildPlan(s);
-        Header = $"Цель: {Plan.Goal.Ru()} · {Plan.Device.Describe()}";
+        Header = Plan.Device.Describe();
         Fixes.Clear(); AbFixes.Clear(); Excluded.Clear(); Advice.Clear(); StartupChoices.Clear();
         foreach (var p in Plan.Fixes)
         {

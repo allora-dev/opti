@@ -59,7 +59,7 @@ public static class EtwDpcCapture
         var pump = Task.Run(() => session.Source.Process());
         try { Task.Delay(duration, ct).Wait(ct); } catch (OperationCanceledException) { }
         session.Stop();
-        pump.Wait(TimeSpan.FromSeconds(10));
+        pump.Wait(TimeSpan.FromSeconds(10), CancellationToken.None); // остановка сессии уже запрошена — ждём разбор
 
         var drivers = new Dictionary<string, DriverLatency>(StringComparer.OrdinalIgnoreCase);
         lock (gate)

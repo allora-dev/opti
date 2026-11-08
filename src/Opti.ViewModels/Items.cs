@@ -6,21 +6,76 @@ using Opti.Measure.Stats;
 
 namespace Opti.ViewModels;
 
+/// <summary>Карточка режима на главной и в настройках. Тексты берутся из <see cref="GoalInfo"/> — одно описание для интерфейса и CLI.</summary>
 public sealed class GoalOption
 {
     public required UserGoal Goal { get; init; }
     public required string Title { get; init; }
+    /// <summary>Короткая строка под названием.</summary>
     public required string Description { get; init; }
+    /// <summary>Что делает режим — 1–2 предложения.</summary>
+    public required string Summary { get; init; }
     /// <summary>Глиф шрифта Segoe Fluent Icons.</summary>
     public required string Icon { get; init; }
+    public required IReadOnlyList<string> Includes { get; init; }
+    public required IReadOnlyList<string> Skips { get; init; }
+    public required string ChangesLevel { get; init; }
+    public required string HeatLevel { get; init; }
+    public required string Verification { get; init; }
+    /// <summary>Плашка «Рекомендуем» на карточке.</summary>
+    public bool IsRecommended => Goal == UserGoal.Balanced;
+    /// <summary>Сколько делений из трёх закрашено в индикаторе «глубина изменений».</summary>
+    public int Intensity => Goal switch { UserGoal.Minimal => 1, UserGoal.Balanced => 2, _ => 3 };
+    public bool Level2 => Intensity >= 2;
+    public bool Level3 => Intensity >= 3;
 
+    private static GoalOption From(UserGoal g, string icon)
+    {
+        var i = GoalInfo.Of(g);
+        return new GoalOption
+        {
+            Goal = g, Title = i.Title, Description = i.Tagline, Summary = i.Summary, Icon = icon,
+            Includes = i.Includes, Skips = i.Skips, ChangesLevel = i.ChangesLevel, HeatLevel = i.HeatLevel, Verification = i.Verification,
+        };
+    }
+
+    /// <summary>Порядок слева направо: от самого глубокого к самому бережному.</summary>
     public static IReadOnlyList<GoalOption> All { get; } = new[]
     {
-        new GoalOption { Goal = UserGoal.LowLatency, Title = "Отклик", Description = "Соревновательные игры", Icon = "\uE945" },
-        new GoalOption { Goal = UserGoal.Smoothness, Title = "Плавность", Description = "Ровные кадры без рывков", Icon = "\uE9E9" },
-        new GoalOption { Goal = UserGoal.MaxFps, Title = "Максимум FPS", Description = "Больше кадров", Icon = "\uEC4A" },
-        new GoalOption { Goal = UserGoal.Streaming, Title = "Стрим", Description = "OBS и запись", Icon = "\uE714" },
-        new GoalOption { Goal = UserGoal.QuietCool, Title = "Тихо", Description = "Меньше шума и нагрева", Icon = "\uE9CA" },
+        From(UserGoal.Maximum, "\uE945"),   // молния
+        From(UserGoal.Balanced, "\uE9E9"),  // ползунки
+        From(UserGoal.Minimal, "\uE73E"),   // галочка
+    };
+}
+
+/// <summary>Строка таблицы «чем отличаются режимы» (столбцы в порядке <see cref="GoalOption.All"/>).</summary>
+public sealed class ModeComparisonRow
+{
+    public required string Feature { get; init; }
+    public required IReadOnlyList<ComparisonCell> Cells { get; init; }
+
+    public static IReadOnlyList<ModeComparisonRow> All { get; } = GoalInfo.Comparison
+        .Select(r => new ModeComparisonRow
+        {
+            Feature = r.Feature,
+            Cells = GoalOption.All.Select(o => ComparisonCell.From(r.For(o.Goal), o.Goal)).ToList(),
+        }).ToList();
+}
+
+public sealed class ComparisonCell
+{
+    public required UserGoal Goal { get; init; }
+    public string? Text { get; init; }
+    public bool IsYes { get; init; }
+    public bool IsNo { get; init; }
+    /// <summary>Подпись для экранного диктора.</summary>
+    public string Spoken => IsYes ? "да" : IsNo ? "нет" : Text ?? "";
+
+    public static ComparisonCell From(string v, UserGoal g) => v switch
+    {
+        "+" => new ComparisonCell { Goal = g, IsYes = true },
+        "-" => new ComparisonCell { Goal = g, IsNo = true },
+        _ => new ComparisonCell { Goal = g, Text = v },
     };
 }
 
@@ -131,7 +186,7 @@ public sealed class MetricCard
         Delta = double.IsNaN(m.DeltaPercent) ? "" : $"{(m.DeltaPercent >= 0 ? "+" : "")}{m.DeltaPercent:0.#} %";
         VerdictText = m.Verdict switch { Verdict.Better => "лучше, достоверно", Verdict.Worse => "хуже, достоверно", Verdict.NoChange => "в пределах шума", _ => "мало данных" };
         Color = m.Verdict switch { Verdict.Better => Palette.Good, Verdict.Worse => Palette.Bad, _ => Palette.Neutral };
-        Ci = $"95 % ДИ: {m.BeforeCi.Low:0.##}–{m.BeforeCi.High:0.##} → {m.AfterCi.Low:0.##}–{m.AfterCi.High:0.##}";
+        Ci = $"95 % ДИ: {m.BeforeCi.Low:0.##}–{m.BeforeCi.High:0.##} → {m.AfterCi.Low:0.##}–{m.AfterCi.High:0.##} · разность {m.DiffCi.Low:+0.##;−0.##;0}…{m.DiffCi.High:+0.##;−0.##;0}";
     }
     private static string Fmt(double v) => double.IsNaN(v) ? "—" : v.ToString(v >= 100 ? "0" : "0.#");
     public string Name { get; }

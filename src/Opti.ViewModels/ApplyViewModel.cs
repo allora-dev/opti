@@ -80,7 +80,7 @@ public sealed partial class ApplyViewModel : PageViewModel
         if (!await Main.Services.ConfirmAsync("Откат", "Вернуть все изменения этой сессии?")) return;
         var r = await Task.Run(() => Main.Services.Workflow.RollbackSession(s));
         Main.Services.Workflow.Close(s);
-        Main.ShowMessage($"Откачено изменений: {r.Restored.Count}" + (r.Errors.Count > 0 ? $", ошибок: {r.Errors.Count}" : "") + ". Для части настроек нужна перезагрузка.");
+        Main.ShowMessage(r.Summary() + " Для части настроек нужна перезагрузка.", r.Errors.Count > 0);
         Main.History.Refresh();
         Main.Navigate(Main.History);
     }

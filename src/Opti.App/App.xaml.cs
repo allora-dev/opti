@@ -11,9 +11,19 @@ public partial class App : Application
 {
     private WindowsAppServices? _services;
 
+    /// <summary>Папка для снимков интерфейса (Opti.exe --screenshots): демо-данные, система не трогается.</summary>
+    public static string? ScreenshotDir { get; set; }
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (ScreenshotDir is not null)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            int code = await Screenshots.RunAsync(this, ScreenshotDir);
+            Shutdown(code);
+            return;
+        }
         DispatcherUnhandledException += OnUnhandled;
         try
         {
@@ -40,10 +50,14 @@ public partial class App : Application
     /// Акцентный текст и ссылки в цветах бренда с достаточным контрастом: на светлом фоне — тёмно-синий,
     /// на тёмном — светло-бирюзовый. Заливки (кнопки, переключатели) одинаковые в обеих темах.
     /// </summary>
-    private void ApplyBrandTheme()
+    internal void ApplyBrandTheme() => ApplyBrandTheme(null);
+
+    /// <param name="forceLight">null — по системной теме; true/false — принудительно (снимки интерфейса).</param>
+    internal void ApplyBrandTheme(bool? forceLight)
     {
         bool light = true;
-        try
+        if (forceLight is { } f) light = f;
+        else try
         {
             using var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
             light = k?.GetValue("AppsUseLightTheme") is not int v || v != 0;
@@ -71,11 +85,7 @@ public partial class App : Application
 
     private static void Log(Exception ex)
     {
-        try
-        {
-            Directory.CreateDirectory(OptiPaths.LogsDir);
-            File.AppendAllText(Path.Combine(OptiPaths.LogsDir, $"opti-{DateTime.Now:yyyyMMdd}.log"), $"[{DateTime.Now:O}] {ex}\n\n");
-        }
-        catch { /* журнал недоступен */ }
+        if (Opti.Core.Diagnostics.OptiLog.Directory is null) Opti.Core.Diagnostics.OptiLog.Init(OptiPaths.LogsDir);
+        Opti.Core.Diagnostics.OptiLog.Error("Необработанная ошибка", ex);
     }
 }

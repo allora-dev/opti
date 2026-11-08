@@ -40,13 +40,15 @@
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" Content="Исправить" Margin="0"
                                 Command="{Binding AutoFixCommand}" IsEnabled="{Binding CanAutoFix}" VerticalAlignment="Center"/>
-                        <TextBlock Text="&#xE90F;" Style="{StaticResource Icon}" FontSize="20" Margin="0,0,16,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+                        <Border Style="{StaticResource IconTile}" Margin="0,0,16,0" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE90F;" Style="{StaticResource IconTileGlyph}"/>
+                        </Border>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="Исправить автоматически" Style="{StaticResource Strong}" FontSize="15"/>
+                            <TextBlock Text="Исправить автоматически" Style="{StaticResource CardTitle}" FontSize="16" LineHeight="22"/>
                             <TextBlock Text="{Binding AutoFixText}" Style="{StaticResource Caption}"/>
                         </StackPanel>
                     </DockPanel>
-                    <WrapPanel Margin="36,12,0,0">
+                    <WrapPanel Margin="56,12,0,0">
                         <Button Style="{StaticResource LinkButton}" Content="Выбрать исправления вручную" Command="{Binding MeasureBeforeCommand}" Margin="0,0,20,0"/>
                         <Button Style="{StaticResource LinkButton}" Content="Без замера" Command="{Binding SkipToStrategyCommand}" Margin="0,0,20,0"/>
                         <Button Style="{StaticResource LinkButton}" Content="Отчёт в HTML" Command="{Binding ExportReportCommand}"/>

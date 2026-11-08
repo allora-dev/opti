@@ -17,7 +17,7 @@
                                 <Border Margin="8,0,0,0" Padding="6,1" CornerRadius="4" VerticalAlignment="Center"
                                         Background="{DynamicResource AccentFillColorDefaultBrush}"
                                         Visibility="{Binding Recommended, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="рекомендуется" FontSize="11" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="рекомендуется" FontSize="11" FontFamily="{StaticResource SmallFont}" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
                                 </Border>
                             </StackPanel>
                             <TextBlock Text="{Binding Description}" Style="{StaticResource Caption}" Margin="0,4,0,0"/>

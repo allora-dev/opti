@@ -45,7 +45,7 @@ public static class HtmlReport
             _ => "",
         };
         sb.Append($"<header><div><h1>Отчёт Opti</h1><p class=\"muted\">{E(p.Device.Manufacturer)} {E(p.Device.Model)} · {E(DeviceClassification.From(p).Describe())}</p>");
-        sb.Append($"<p class=\"muted\">Цель: <b>{E(s.Goal.Ru())}</b> · сессия {E(s.Id)} · {s.CreatedAt.LocalDateTime:dd.MM.yyyy HH:mm}</p></div>{verdictBadge}</header>");
+        sb.Append($"<p class=\"muted\">Режим: <b>{E(s.Goal.Ru())}</b> · сессия {E(s.Id)} · {s.CreatedAt.LocalDateTime:dd.MM.yyyy HH:mm}</p></div>{verdictBadge}</header>");
 
         if (d.CompareMessage is not null) sb.Append($"<p class=\"lead\">{E(d.CompareMessage)}</p>");
 
@@ -60,7 +60,7 @@ public static class HtmlReport
                 sb.Append($"<div class=\"card {cls}\"><div class=\"label\">{E(m.Metric.Name)}</div>");
                 sb.Append($"<div class=\"value\">{F(m.Before)} → <b>{F(m.After)}</b> <small>{E(m.Metric.Unit)}</small></div>");
                 sb.Append($"<div class=\"delta\">{(m.DeltaPercent >= 0 ? "+" : "")}{F(m.DeltaPercent)} % · {word}</div>");
-                sb.Append($"<div class=\"ci\">95 % ДИ: {F(m.BeforeCi.Low, "0.##")}–{F(m.BeforeCi.High, "0.##")} → {F(m.AfterCi.Low, "0.##")}–{F(m.AfterCi.High, "0.##")}</div></div>");
+                sb.Append($"<div class=\"ci\">95 % ДИ: {F(m.BeforeCi.Low, "0.##")}–{F(m.BeforeCi.High, "0.##")} → {F(m.AfterCi.Low, "0.##")}–{F(m.AfterCi.High, "0.##")} · разность {F(m.DiffCi.Low, "+0.##;−0.##;0")}…{F(m.DiffCi.High, "+0.##;−0.##;0")}</div></div>");
             }
             sb.Append("</div>");
             foreach (var w in cmp.Warnings) sb.Append($"<p class=\"warn\">⚠ {E(w)}</p>");
@@ -209,10 +209,10 @@ public static class HtmlReport
           --before:#7d8696;--after:#5b9bff;--crit:#f2766b;--imp:#f0b54a;--adv:#9aa2ae;}}
         :root[data-theme="dark"]{--bg:#111317;--panel:#1a1d23;--text:#e8eaee;--muted:#9aa2ae;--border:#2b3038;--grid:#262a31;--good:#4cc38a;
           --good-bg:#173226;--bad:#f2766b;--bad-bg:#3a1d1b;--neutral-bg:#23272e;--warn:#f0b54a;--before:#7d8696;--after:#5b9bff;--crit:#f2766b;--imp:#f0b54a;--adv:#9aa2ae;}
-        *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+        *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif}
         main{max-width:1040px;margin:0 auto;padding:24px 16px 48px}
         header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-        h1{margin:0 0 4px;font-size:26px}h2{font-size:18px;margin:28px 0 12px}
+        h1{margin:0 0 4px;font:600 28px/1.25 "Segoe UI Variable Display","Segoe UI",system-ui,sans-serif}h2{font:600 18px/1.3 "Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;margin:28px 0 12px}
         section{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:4px 20px 16px;margin-top:16px;overflow-x:auto}
         .muted{color:var(--muted);margin:2px 0}.small{font-size:13px}.lead{font-size:17px;margin:16px 0 0}
         .badge{padding:6px 14px;border-radius:999px;font-weight:600;white-space:nowrap}

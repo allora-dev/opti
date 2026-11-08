@@ -62,6 +62,14 @@ public sealed class ChangeContext
             _journal.Remove(record.Id);
             throw new ChangeAbortedException($"Не удалось изменить {type} {target}: {ex.Message}", ex);
         }
+        // Настройка уже изменена: если подтверждение не запишется, запись останется «неподтверждённой»,
+        // но исходное значение в ней есть — откат всё равно возможен.
+        try { _journal.Commit(record.Id); record.Committed = true; }
+        catch (Exception ex)
+        {
+            record.Committed = false;
+            Opti.Core.Diagnostics.OptiLog.Warn($"Изменение {type} {target} сделано, но не подтверждено в журнале", ex);
+        }
         _records.Add(record);
         return record;
     }

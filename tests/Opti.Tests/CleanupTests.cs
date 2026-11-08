@@ -54,7 +54,7 @@ public sealed class CleanupTests : IDisposable
         Make("iconcache_1.db", 100, TimeSpan.FromDays(3));
         Make(@"sub/thumbcache_x.db", 100, TimeSpan.FromDays(3));
         var t = new FolderCleanupTarget("t", "", "", () => new[] { _root }, TimeSpan.FromDays(1),
-            fileFilter: f => Path.GetFileName(f).StartsWith("thumbcache_"), recursive: false);
+            fileFilter: f => Path.GetFileName(f).StartsWith("thumbcache_", StringComparison.Ordinal), recursive: false);
         var r = await t.CleanAsync();
         Assert.Equal(1, r.Deleted);
         Assert.True(File.Exists(Path.Combine(_root, "iconcache_1.db")));

@@ -51,7 +51,7 @@ public sealed class TweakService
         catch
         {
             // Твик атомарный: не получилось целиком — возвращаем то, что успели изменить
-            new RollbackService(_backends, _journal).RollbackRecords(done);
+            new RollbackService(_backends, _journal).RollbackRecords(done, force: true);
             throw;
         }
     }
